@@ -1,116 +1,422 @@
-/* 전체 레이아웃 */
-.player-container {
-  max-width: 700px;
-  margin: 0px auto;
-  padding: 30px;
-  background-color: #f9fafb;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: #333;
+/* =========================================
+   1. 글로벌 & 레이아웃 (Global & Layout)
+   ========================================= */
+:root {
+  --primary-color: #6366f1; /* Indigo */
+  --primary-hover: #4f46e5;
+  --success-color: #10b981; /* Emerald */
+  --danger-color: #ef4444;  /* Red */
+  --bg-color: #f8fafc;      /* Slate-50 */
+  --card-bg: #ffffff;
+  --text-main: #1e293b;
+  --text-sub: #64748b;
+  --border-radius: 16px;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-h1 { text-align: center; margin-bottom: 30px; color: #1f2937; }
+body {
+  background-color: var(--bg-color);
+  margin: 0;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+}
 
-.upload-section { margin-bottom: 20px; text-align: center; }
-.file-input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white; }
-.file-name { margin-top: 10px; color: #6b7280; font-size: 0.9em; }
+.player-container {
+  max-width: 800px;
+  width: 95%;
+  margin: 40px auto;
+  padding: 40px;
+  background-color: var(--card-bg);
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
+  color: var(--text-main);
+}
 
-/* === 파형 래퍼 (중요) === */
+/* 타이틀: 모던한 그라데이션 텍스트 효과 */
+h1 {
+  text-align: center;
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin-bottom: 40px;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.05rem;
+}
+
+h2, h3 {
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 15px;
+}
+
+/* =========================================
+   2. 파일 업로드 섹션 (Upload Area)
+   ========================================= */
+.upload-section {
+  position: relative;
+  margin-bottom: 30px;
+  padding: 30px;
+  background-color: #f1f5f9;
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--border-radius);
+  text-align: center;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.upload-section:hover {
+  border-color: var(--primary-color);
+  background-color: #eef2ff;
+  transform: translateY(-2px);
+}
+
+.file-input {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 300px;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.file-name {
+  margin-top: 15px;
+  font-size: 1.1rem;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.file-name strong {
+  color: var(--primary-color);
+  background: #e0e7ff;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* =========================================
+   3. 파형 (Waveform Visualization)
+   ========================================= */
 .waveform-wrapper {
   position: relative;
-  min-height: 140px; 
-  margin-bottom: 25px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow: hidden;
-  /* 래퍼에 패딩을 줘서 안쪽 여백을 확보합니다. */
-  padding: 10px; 
+  min-height: 140px;
+  margin-bottom: 30px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--border-radius);
+  padding: 20px;
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.03);
 }
 
-
-/* === 로딩 오버레이 === */
-.loading-overlay {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.9);
-  z-index: 10;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-/* 로딩 스피너 애니메이션 */
-.spinner {
-  width: 30px;
-  height: 30px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #4f46e5;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 10px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* === 파형 컨테이너 표시/숨김 처리 === */
 .waveform-container {
-  /* [수정] 중요: 여기서 padding: 10px을 제거해야 좌표가 정확히 맞습니다. */
-  padding: 0; 
   width: 100%;
   height: 100%;
-  transition: opacity 0.3s ease-in-out;
+  padding: 0;
+  transition: opacity 0.3s ease;
 }
 
+/* 북마크(Region)가 파형 위에 오도록 강제 (필수) */
 .wavesurfer-region {
   z-index: 100 !important;
 }
 
-/* 안 보일 때 (공간은 차지하되 투명하게) */
-.waveform-container.hidden {
-  opacity: 0;
-  pointer-events: none; /* 클릭 방지 */
+.waveform-container.hidden { opacity: 0; pointer-events: none; }
+.waveform-container.visible { opacity: 1; pointer-events: auto; }
+
+/* 로딩 오버레이 */
+.loading-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 50;
+  border-radius: var(--border-radius);
+  backdrop-filter: blur(2px);
 }
 
-/* 보일 때 */
-.waveform-container.visible {
-  opacity: 1;
-  pointer-events: auto;
+.spinner {
+  width: 35px;
+  height: 35px;
+  border: 4px solid #e2e8f0;
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 10px;
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* 컨트롤 버튼들 */
-.controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; }
+/* =========================================
+   4. 컨트롤 버튼 (Controls)
+   ========================================= */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
 
 button {
-  padding: 10px 20px;
-  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+button:active { transform: scale(0.96); }
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(80%);
+}
+
+/* 재생 버튼: 그라데이션 */
+.btn-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  box-shadow: 0 6px 10px rgba(99, 102, 241, 0.4);
+}
+
+/* 북마크 버튼: 흰색 바탕 */
+.btn-secondary {
+  background-color: #ffffff;
+  color: var(--text-main);
+  border: 1px solid #e2e8f0;
+}
+.btn-secondary:hover {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* 저장 버튼: 초록색 그라데이션 */
+.btn-save {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+}
+.btn-save:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 6px 10px rgba(16, 185, 129, 0.4);
+}
+
+.hint-text {
+  text-align: center;
+  color: var(--text-sub);
+  font-size: 0.9rem;
+  margin-bottom: 40px;
+  background: #f1f5f9;
+  display: inline-block;
+  padding: 5px 15px;
+  border-radius: 20px;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* =========================================
+   5. 현재 북마크 리스트 (Current Bookmarks)
+   ========================================= */
+.bookmarks-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--border-radius);
+  padding: 25px;
+  margin-bottom: 50px;
+}
+
+.bookmark-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.bookmark-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  margin-bottom: 8px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid transparent;
   transition: all 0.2s;
 }
-button:active { transform: scale(0.98); }
-button:disabled { 
-  opacity: 0.4; 
-  cursor: not-allowed; 
-  background-color: #ccc;
-  color: #888;
+
+.bookmark-item:hover {
+  background: #fff;
+  border-color: #e2e8f0;
+  box-shadow: var(--shadow-sm);
 }
 
-.btn-primary { background-color: #4f46e5; color: white; font-weight: bold; }
-.btn-secondary { background-color: #e5e7eb; color: #374151; }
-.btn-delete { background: #fee2e2; color: #ef4444; padding: 5px 10px; font-size: 0.8em; margin-left: 10px;}
-
-.bookmarks-section { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb; }
-.bookmark-list { list-style: none; padding: 0; margin: 0; }
-.bookmark-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px; border-bottom: 1px solid #f3f4f6;
+.bookmark-time {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
 }
-.bookmark-item:last-child { border-bottom: none; }
-.bookmark-time { font-weight: 600; color: #4f46e5; cursor: pointer; padding: 5px 10px; border-radius: 6px; }
-.bookmark-time:hover { background-color: #eef2ff; }
-.empty-state { text-align: center; color: #9ca3af; font-size: 0.9rem; }
+
+.bookmark-time:hover {
+  background-color: #e0e7ff;
+  text-decoration: underline;
+}
+
+.btn-delete {
+  background-color: #fee2e2;
+  color: #ef4444;
+  padding: 6px 10px;
+  font-size: 1rem;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.btn-delete:hover {
+  background-color: #fecaca;
+  color: #b91c1c;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-sub);
+  padding: 20px 0;
+  font-style: italic;
+}
+
+/* =========================================
+   6. 학습 기록 히스토리 (History Cards)
+   ========================================= */
+.history-section {
+  position: relative;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 40px;
+}
+
+.history-section h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 1.5rem;
+}
+
+.history-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.history-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.history-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-color);
+}
+
+/* 카드 상단 */
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: var(--text-sub);
+}
+
+.btn-text-delete {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: none;
+  transition: color 0.2s;
+}
+.btn-text-delete:hover {
+  color: var(--danger-color);
+  text-decoration: underline;
+}
+
+/* 카드 내용 */
+.history-body {
+  margin-bottom: 15px;
+}
+
+.history-file {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 10px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-score {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f1f5f9;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.score-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-sub);
+}
+
+.score-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--danger-color);
+}
+
+.score-value.perfect {
+  color: var(--success-color);
+}
+
+/* 태그 리스트 */
+.history-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.time-tag {
+  background-color: #e0e7ff;
+  color: var(--primary-color);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+}

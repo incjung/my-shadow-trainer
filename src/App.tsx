@@ -10,6 +10,15 @@ interface Bookmark {
   regionId: string;
 }
 
+// [추가] 저장될 학습 기록 데이터 타입 정의
+interface SessionRecord {
+  id: number;
+  date: string;       // 저장 날짜 (YYYY-MM-DD HH:mm)
+  fileName: string;   // 음원 파일명
+  count: number;      // 북마크 개수 (실력 척도)
+  bookmarks: Bookmark[]; // 북마크 상세 내용
+}
+
 function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
@@ -21,13 +30,23 @@ function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [isReady, setIsReady] = useState(false);
 
+  // [추가] 학습 기록 상태 관리
+  const [history, setHistory] = useState<SessionRecord[]>([]);
+
+  // 0. [추가] 앱 시작 시 LocalStorage에서 기록 불러오기
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('audio-study-history');
+    if (savedHistory) {
+      setHistory(JSON.parse(savedHistory));
+    }
+  }, []);
+
   // 1. WaveSurfer 초기화
   useEffect(() => {
     if (!containerRef.current) return;
 
     const ws = WaveSurfer.create({
       container: containerRef.current,
-      // 파형 색상 설정 (재생 진행바 색상 제거됨)
       waveColor: '#d1d5db',      
       progressColor: '#d1d5db',  
       cursorColor: '#333',
@@ -40,7 +59,7 @@ function App() {
 
     const wsRegions = ws.registerPlugin(RegionsPlugin.create({
       dragSelection: false,
-    }));
+    } as any));
     
     regionsRef.current = wsRegions;
     wavesurferRef.current = ws;
@@ -61,35 +80,22 @@ function App() {
     };
   }, []);
 
-  // ==========================================
-  // [추가된 기능] 키보드 이벤트 리스너 (좌우 화살표)
-  // ==========================================
+  // 키보드 이벤트
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 파형이 준비되지 않았으면 무시
       if (!wavesurferRef.current || !isReady) return;
 
-      if (e.code === 'ArrowLeft') {
-        // 왼쪽 화살표: 5초 뒤로
-        wavesurferRef.current.skip(-5);
-      } else if (e.code === 'ArrowRight') {
-        // 오른쪽 화살표: 5초 앞으로
-        wavesurferRef.current.skip(5);
-      } else if (e.code === 'Space') {
-        // (선택사항) 스페이스바: 재생/일시정지 토글
-        e.preventDefault(); // 스크롤 방지
+      if (e.code === 'ArrowLeft') wavesurferRef.current.skip(-5);
+      else if (e.code === 'ArrowRight') wavesurferRef.current.skip(5);
+      else if (e.code === 'Space') {
+        e.preventDefault(); 
         wavesurferRef.current.playPause();
       }
     };
 
-    // 윈도우 전체에 이벤트 붙이기
     window.addEventListener('keydown', handleKeyDown);
-
-    // 컴포넌트 사라질 때 이벤트 떼기 (청소)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isReady]); // isReady가 바뀔 때마다 갱신
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isReady]);
 
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,11 +128,7 @@ function App() {
       resize: false,
     });
 
-    if (region.element) {
-      // z-index는 CSS에서 !important로 처리했지만, 
-      // 혹시 몰라 JS에서도 안전하게 한번 더 줍니다.
-      region.element.style.zIndex = '100'; 
-    }
+    if (region.element) region.element.style.zIndex = '100'; 
 
     const newBookmark: Bookmark = {
       id: Date.now(),
@@ -154,6 +156,39 @@ function App() {
     setBookmarks((prev) => prev.filter((b) => b.id !== id));
   };
 
+  // [추가] 현재 학습 세션 저장하기
+  const saveSession = () => {
+    if (!fileName) return;
+
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const newRecord: SessionRecord = {
+      id: Date.now(),
+      date: dateStr,
+      fileName: fileName,
+      count: bookmarks.length, // 북마크 개수 저장
+      bookmarks: [...bookmarks], // 현재 북마크 리스트 복사 저장
+    };
+
+    const updatedHistory = [newRecord, ...history];
+    setHistory(updatedHistory);
+    
+    // 브라우저 저장소에 영구 저장
+    localStorage.setItem('audio-study-history', JSON.stringify(updatedHistory));
+    
+    alert('학습 기록이 저장되었습니다! 📝');
+  };
+
+  // [추가] 기록 삭제 기능
+  const deleteHistoryItem = (id: number) => {
+    if(confirm('이 기록을 삭제하시겠습니까?')) {
+      const updatedHistory = history.filter(item => item.id !== id);
+      setHistory(updatedHistory);
+      localStorage.setItem('audio-study-history', JSON.stringify(updatedHistory));
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -162,10 +197,10 @@ function App() {
 
   return (
     <div className="player-container">
-      <h1>🎵 Bun Audio Player</h1>
+      <h1>🎵 Bun Audio Study</h1>
       
-	<div className="upload-section">
-          <input type="file" accept="audio/*" onChange={handleFileUpload} className="file-input" />
+      <div className="upload-section">
+        <input type="file" accept="audio/*" onChange={handleFileUpload} className="file-input" />
         {fileName && <p className="file-name">Playing: <strong>{fileName}</strong></p>}
       </div>
 
@@ -184,21 +219,26 @@ function App() {
         />
       </div>
 
-	  <div className="controls">
-            <button onClick={togglePlay} className="btn-primary" disabled={!isReady}>
+      <div className="controls">
+        <button onClick={togglePlay} className="btn-primary" disabled={!isReady}>
           {isPlaying ? '⏸ 일시정지' : '▶ 재생'}
         </button>
         <button onClick={addBookmark} className="btn-secondary" disabled={!isReady}>
           📍 북마크 추가 ({formatTime(currentTime)})
         </button>
+        {/* [추가] 저장 버튼 */}
+        <button onClick={saveSession} className="btn-save" disabled={!isReady}>
+          💾 기록 저장
+        </button>
       </div>
       
       <p className="hint-text">💡 Tip: 키보드 좌우 화살표(←, →)로 5초씩 이동하세요.</p>
 
+      {/* 현재 북마크 목록 */}
       <div className="bookmarks-section">
-        <h3>북마크 목록 ({bookmarks.length})</h3>
+        <h3>현재 북마크 ({bookmarks.length})</h3>
         {bookmarks.length === 0 ? (
-          <p className="empty-state">북마크가 없습니다. 듣고 싶은 구간을 저장해보세요!</p>
+          <p className="empty-state">북마크가 없습니다. 잘 안 들리는 부분을 체크해보세요!</p>
         ) : (
           <ul className="bookmark-list">
             {bookmarks.map((bm) => (
@@ -208,12 +248,49 @@ function App() {
                 </span>
                 <button onClick={() => removeBookmark(bm.id)} className="btn-delete">×</button>
               </li>
-		  ))}
+            ))}
           </ul>
-		  )}
-		  </div>
+        )}
+      </div>
+
+      {/* [추가] 학습 기록 히스토리 영역 */}
+      <div className="history-section">
+        <h2>📚 학습 기록 (History)</h2>
+        {history.length === 0 ? (
+          <p className="empty-state">아직 저장된 기록이 없습니다.</p>
+        ) : (
+          <div className="history-list">
+            {history.map((item) => (
+              <div key={item.id} className="history-card">
+                <div className="history-header">
+                  <span className="history-date">{item.date}</span>
+                  <button onClick={() => deleteHistoryItem(item.id)} className="btn-text-delete">삭제</button>
+                </div>
+                <div className="history-body">
+                  <p className="history-file">📂 {item.fileName}</p>
+                  <div className="history-score">
+                    <span className="score-label">북마크 개수</span>
+                    <span className={`score-value ${item.count === 0 ? 'perfect' : ''}`}>
+                      {item.count}개
+                    </span>
+                  </div>
+                </div>
+                {/* 기록된 북마크 시간대 나열 */}
+                {item.count > 0 && (
+                  <div className="history-tags">
+                    {item.bookmarks.map(b => (
+                      <span key={b.id} className="time-tag">{b.label}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
     </div>
-    );
-    }
+  );
+}
 
 export default App;

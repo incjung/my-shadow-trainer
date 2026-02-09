@@ -16,3 +16,14 @@
     bun add wavesurfer.js
     bun add -d bun-types
 #+end_src
+
+* test run
+#+begin_src bash
+  bun dev
+#+end_src
+
+* Bun preview
+#+begin_src bash
+    bun run build
+    bun run preview
+#+end_src
