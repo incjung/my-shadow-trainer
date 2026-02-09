@@ -420,3 +420,50 @@ button:disabled {
   padding: 4px 10px;
   border-radius: 20px;
 }
+
+/* [추가] 배속 조절 섹션 */
+.speed-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 30px;
+  background: #f8fafc;
+  padding: 10px;
+  border-radius: 12px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.speed-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-right: 5px;
+}
+
+.btn-speed {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  background-color: white;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  border-radius: 8px;
+  min-width: 50px;
+  box-shadow: none;
+}
+
+.btn-speed:hover:not(:disabled) {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* 선택된 배속 버튼 스타일 */
+.btn-speed.active {
+  background-color: #6366f1; /* Primary Color */
+  color: white;
+  border-color: #6366f1;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+}

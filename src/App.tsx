@@ -10,13 +10,12 @@ interface Bookmark {
   regionId: string;
 }
 
-// [추가] 저장될 학습 기록 데이터 타입 정의
 interface SessionRecord {
   id: number;
-  date: string;       // 저장 날짜 (YYYY-MM-DD HH:mm)
-  fileName: string;   // 음원 파일명
-  count: number;      // 북마크 개수 (실력 척도)
-  bookmarks: Bookmark[]; // 북마크 상세 내용
+  date: string;       
+  fileName: string;   
+  count: number;      
+  bookmarks: Bookmark[]; 
 }
 
 function App() {
@@ -29,11 +28,12 @@ function App() {
   const [fileName, setFileName] = useState<string>("");
   const [currentTime, setCurrentTime] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  
+  // [추가] 재생 속도 State (기본 1.0)
+  const [playbackRate, setPlaybackRate] = useState(1.0);
 
-  // [추가] 학습 기록 상태 관리
   const [history, setHistory] = useState<SessionRecord[]>([]);
 
-  // 0. [추가] 앱 시작 시 LocalStorage에서 기록 불러오기
   useEffect(() => {
     const savedHistory = localStorage.getItem('audio-study-history');
     if (savedHistory) {
@@ -41,7 +41,6 @@ function App() {
     }
   }, []);
 
-  // 1. WaveSurfer 초기화
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -64,7 +63,12 @@ function App() {
     regionsRef.current = wsRegions;
     wavesurferRef.current = ws;
 
-    ws.on('ready', () => setIsReady(true));
+    ws.on('ready', () => {
+      setIsReady(true);
+      // [중요] 파일이 바뀌거나 준비되었을 때, 현재 설정된 배속 적용
+      ws.setPlaybackRate(playbackRate); 
+    });
+    
     ws.on('play', () => setIsPlaying(true));
     ws.on('pause', () => setIsPlaying(false));
     ws.on('timeupdate', (time) => setCurrentTime(time));
@@ -78,7 +82,15 @@ function App() {
     return () => {
       ws.destroy();
     };
-  }, []);
+  }, []); // 의존성 배열은 비워둠 (playbackRate는 ref로 접근하거나 이벤트에서 처리)
+
+  // [추가] playbackRate가 변경될 때마다 WaveSurfer에 적용
+  useEffect(() => {
+    if (wavesurferRef.current && isReady) {
+      wavesurferRef.current.setPlaybackRate(playbackRate);
+    }
+  }, [playbackRate, isReady]);
+
 
   // 키보드 이벤트
   useEffect(() => {
@@ -114,6 +126,11 @@ function App() {
 
   const togglePlay = () => {
     wavesurferRef.current?.playPause();
+  };
+
+  // [추가] 속도 변경 핸들러
+  const handleSpeedChange = (rate: number) => {
+    setPlaybackRate(rate);
   };
 
   const addBookmark = () => {
@@ -156,7 +173,6 @@ function App() {
     setBookmarks((prev) => prev.filter((b) => b.id !== id));
   };
 
-  // [추가] 현재 학습 세션 저장하기
   const saveSession = () => {
     if (!fileName) return;
 
@@ -167,20 +183,17 @@ function App() {
       id: Date.now(),
       date: dateStr,
       fileName: fileName,
-      count: bookmarks.length, // 북마크 개수 저장
-      bookmarks: [...bookmarks], // 현재 북마크 리스트 복사 저장
+      count: bookmarks.length,
+      bookmarks: [...bookmarks],
     };
 
     const updatedHistory = [newRecord, ...history];
     setHistory(updatedHistory);
-    
-    // 브라우저 저장소에 영구 저장
     localStorage.setItem('audio-study-history', JSON.stringify(updatedHistory));
     
     alert('학습 기록이 저장되었습니다! 📝');
   };
 
-  // [추가] 기록 삭제 기능
   const deleteHistoryItem = (id: number) => {
     if(confirm('이 기록을 삭제하시겠습니까?')) {
       const updatedHistory = history.filter(item => item.id !== id);
@@ -194,6 +207,9 @@ function App() {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // 배속 옵션 리스트
+  const speedOptions = [0.5, 1.0, 1.5, 2.0];
 
   return (
     <div className="player-container">
@@ -219,6 +235,7 @@ function App() {
         />
       </div>
 
+      {/* 메인 컨트롤 */}
       <div className="controls">
         <button onClick={togglePlay} className="btn-primary" disabled={!isReady}>
           {isPlaying ? '⏸ 일시정지' : '▶ 재생'}
@@ -226,15 +243,28 @@ function App() {
         <button onClick={addBookmark} className="btn-secondary" disabled={!isReady}>
           📍 북마크 추가 ({formatTime(currentTime)})
         </button>
-        {/* [추가] 저장 버튼 */}
         <button onClick={saveSession} className="btn-save" disabled={!isReady}>
           💾 기록 저장
         </button>
       </div>
+
+      {/* [추가] 배속 조절 버튼 그룹 */}
+      <div className="speed-controls">
+        <span className="speed-label">재생 속도:</span>
+        {speedOptions.map((rate) => (
+          <button
+            key={rate}
+            onClick={() => handleSpeedChange(rate)}
+            className={`btn-speed ${playbackRate === rate ? 'active' : ''}`}
+            disabled={!isReady}
+          >
+            x{rate}
+          </button>
+        ))}
+      </div>
       
       <p className="hint-text">💡 Tip: 키보드 좌우 화살표(←, →)로 5초씩 이동하세요.</p>
 
-      {/* 현재 북마크 목록 */}
       <div className="bookmarks-section">
         <h3>현재 북마크 ({bookmarks.length})</h3>
         {bookmarks.length === 0 ? (
@@ -253,7 +283,6 @@ function App() {
         )}
       </div>
 
-      {/* [추가] 학습 기록 히스토리 영역 */}
       <div className="history-section">
         <h2>📚 학습 기록 (History)</h2>
         {history.length === 0 ? (
@@ -275,7 +304,6 @@ function App() {
                     </span>
                   </div>
                 </div>
-                {/* 기록된 북마크 시간대 나열 */}
                 {item.count > 0 && (
                   <div className="history-tags">
                     {item.bookmarks.map(b => (
