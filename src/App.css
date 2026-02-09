@@ -249,6 +249,31 @@ button:disabled {
 /* =========================================
    5. 현재 북마크 리스트 (Current Bookmarks)
    ========================================= */
+
+
+.bookmarks-header {
+  display: flex;
+  justify-content: space-between; /* 제목은 왼쪽, 버튼은 오른쪽 */
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* [추가] 전체 삭제 버튼 스타일 */
+.btn-clear-all {
+  background: none;
+  border: 1px solid #ff4d4f;
+  color: #ff4d4f;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.btn-clear-all:hover {
+  background-color: #fff1f0;
+}
+
 .bookmarks-section {
   background: #ffffff;
   border: 1px solid #e2e8f0;

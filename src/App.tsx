@@ -195,6 +195,21 @@ function App() {
     setBookmarks((prev) => prev.filter((b) => b.id !== id));
   };
 
+  const removeAllBookmarks = () => {
+    if (bookmarks.length === 0) return;
+    
+    if (window.confirm('정말로 모든 북마크를 삭제하시겠습니까?')) {
+      // 1. 화면의 리스트 비우기
+      setBookmarks([]);
+      
+      // 2. 파형 위의 빨간 선들 모두 제거
+      if (regionsRef.current) {
+        regionsRef.current.clearRegions();
+      }
+    }
+  };
+
+
   const saveSession = () => {
     if (!fileName) return;
 
@@ -287,8 +302,19 @@ function App() {
         💡 Tip: ←/→(5초 이동), Space(재생/멈춤), <strong>M(북마크), Home(처음으로)</strong>
       </p>
 
-      <div className="bookmarks-section">
-        <h3>현재 북마크 ({bookmarks.length})</h3>
+<div className="bookmarks-section">
+        {/* [수정] 헤더 영역을 flex로 감싸서 버튼을 우측에 배치 */}
+        <div className="bookmarks-header">
+          <h3>현재 북마크 ({bookmarks.length})</h3>
+          
+          {/* 북마크가 1개 이상일 때만 '전체 삭제' 버튼 보임 */}
+          {bookmarks.length > 0 && (
+            <button onClick={removeAllBookmarks} className="btn-clear-all">
+              🗑️ 전체 삭제
+            </button>
+          )}
+        </div>
+
         {bookmarks.length === 0 ? (
           <p className="empty-state">북마크가 없습니다. M 키를 눌러 추가해보세요!</p>
         ) : (
