@@ -151,6 +151,22 @@ h2, h3 {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* [추가] 파형 영역 내 시간 표시 오버레이 */
+.time-display-overlay {
+  position: absolute;
+  bottom: 10px;
+  right: 15px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-family: monospace;
+  font-weight: 600;
+  z-index: 101; /* 북마크보다 위에 보일지, 아래 보일지 결정 (현재 최상위) */
+  pointer-events: none; /* 마우스 클릭 통과 */
+}
+
 /* =========================================
    4. 컨트롤 버튼 (Controls)
    ========================================= */

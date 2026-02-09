@@ -18,7 +18,7 @@ interface SessionRecord {
   bookmarks: Bookmark[]; 
 }
 
-// [이동] 시간 포맷 함수는 상태에 의존하지 않으므로 컴포넌트 밖으로 뺌
+// 시간 포맷 함수 (MM:SS)
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
@@ -35,6 +35,9 @@ function App() {
   const [fileName, setFileName] = useState<string>("");
   const [currentTime, setCurrentTime] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  
+  // [추가] 총 재생 시간 State
+  const [duration, setDuration] = useState(0);
   
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [history, setHistory] = useState<SessionRecord[]>([]);
@@ -68,9 +71,16 @@ function App() {
     regionsRef.current = wsRegions;
     wavesurferRef.current = ws;
 
+    // [수정] ready 이벤트에서 총 시간(Duration) 가져오기
     ws.on('ready', () => {
       setIsReady(true);
+      setDuration(ws.getDuration()); // 총 시간 저장
       ws.setPlaybackRate(playbackRate); 
+    });
+    
+    // [추가] 파일이 새로 디코딩될 때마다 총 시간 업데이트
+    ws.on('decode', (duration) => {
+      setDuration(duration);
     });
     
     ws.on('play', () => setIsPlaying(true));
@@ -94,9 +104,6 @@ function App() {
     }
   }, [playbackRate, isReady]);
 
-  // ==========================================
-  // [수정] addBookmark를 useEffect 위로 올리고 useCallback 적용
-  // ==========================================
   const addBookmark = useCallback(() => {
     if (!wavesurferRef.current || !regionsRef.current || !isReady) return;
     
@@ -119,10 +126,10 @@ function App() {
     };
 
     setBookmarks((prev) => [...prev, newBookmark].sort((a, b) => a.time - b.time));
-  }, [isReady]); // isReady가 변할 때만 재생성
+  }, [isReady]); 
 
   // ==========================================
-  // [수정] 키보드 이벤트 리스너 ('m' 키 추가)
+  // [수정] 키보드 이벤트 리스너 (Home 키 추가)
   // ==========================================
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -136,14 +143,18 @@ function App() {
         e.preventDefault(); 
         wavesurferRef.current.playPause();
       } else if (e.code === 'KeyM') { 
-        // [추가] 'm' 키를 누르면 북마크 추가
         addBookmark();
+      } else if (e.code === 'Home') {
+        // [추가] Home 키: 처음으로 이동 후 재생
+        e.preventDefault();
+        wavesurferRef.current.setTime(0);
+        wavesurferRef.current.play();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isReady, addBookmark]); // addBookmark가 의존성에 포함됨
+  }, [isReady, addBookmark]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -153,6 +164,7 @@ function App() {
       setBookmarks([]);
       regionsRef.current.clearRegions();
       setFileName(file.name);
+      setDuration(0); // 파일 변경 시 시간 초기화
 
       const url = URL.createObjectURL(file);
       wavesurferRef.current.load(url);
@@ -236,22 +248,27 @@ function App() {
           ref={containerRef} 
           className={`waveform-container ${isReady ? 'visible' : 'hidden'}`} 
         />
+
+        {/* [추가] 파형 영역 내 시간 표시 (우측 하단) */}
+        {isReady && (
+          <div className="time-display-overlay">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </div>
+        )}
       </div>
 
-      {/* 메인 컨트롤 */}
       <div className="controls">
         <button onClick={togglePlay} className="btn-primary" disabled={!isReady}>
           {isPlaying ? '⏸ 일시정지' : '▶ 재생'}
         </button>
         <button onClick={addBookmark} className="btn-secondary" disabled={!isReady}>
-          📍 북마크 추가 ({formatTime(currentTime)})
+          📍 북마크 추가
         </button>
         <button onClick={saveSession} className="btn-save" disabled={!isReady}>
           💾 기록 저장
         </button>
       </div>
 
-      {/* 배속 조절 버튼 그룹 */}
       <div className="speed-controls">
         <span className="speed-label">재생 속도:</span>
         {speedOptions.map((rate) => (
@@ -266,7 +283,9 @@ function App() {
         ))}
       </div>
       
-      <p className="hint-text">💡 Tip: ←/→(5초 이동), Space(재생/멈춤), <strong>M(북마크)</strong></p>
+      <p className="hint-text">
+        💡 Tip: ←/→(5초 이동), Space(재생/멈춤), <strong>M(북마크), Home(처음으로)</strong>
+      </p>
 
       <div className="bookmarks-section">
         <h3>현재 북마크 ({bookmarks.length})</h3>
