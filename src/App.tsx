@@ -21,17 +21,16 @@ function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [isReady, setIsReady] = useState(false);
 
+  // 1. WaveSurfer 초기화
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // 1. WaveSurfer 생성
     const ws = WaveSurfer.create({
       container: containerRef.current,
-      // [수정] waveColor와 progressColor를 동일하게 설정하여
-      // 재생 시 색상 변화가 없도록 함 (북마크 강조를 위함)
+      // 파형 색상 설정 (재생 진행바 색상 제거됨)
       waveColor: '#d1d5db',      
       progressColor: '#d1d5db',  
-      cursorColor: '#333',       // 재생 위치를 알려주는 선 (진한 회색)
+      cursorColor: '#333',
       barWidth: 2,
       barGap: 3,
       barRadius: 3,
@@ -39,24 +38,18 @@ function App() {
       normalize: true, 
     });
 
-    // 2. Regions 플러그인 등록
     const wsRegions = ws.registerPlugin(RegionsPlugin.create({
-      dragSelection: false, // 드래그 방지
+      dragSelection: false,
     }));
     
     regionsRef.current = wsRegions;
     wavesurferRef.current = ws;
 
-    // === 이벤트 리스너 ===
-    ws.on('ready', () => {
-      setIsReady(true);
-    });
-
+    ws.on('ready', () => setIsReady(true));
     ws.on('play', () => setIsPlaying(true));
     ws.on('pause', () => setIsPlaying(false));
     ws.on('timeupdate', (time) => setCurrentTime(time));
     
-    // 북마크 클릭 시 재생
     wsRegions.on('region-clicked', (region, e) => {
       e.stopPropagation();
       region.play();
@@ -67,6 +60,37 @@ function App() {
       ws.destroy();
     };
   }, []);
+
+  // ==========================================
+  // [추가된 기능] 키보드 이벤트 리스너 (좌우 화살표)
+  // ==========================================
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 파형이 준비되지 않았으면 무시
+      if (!wavesurferRef.current || !isReady) return;
+
+      if (e.code === 'ArrowLeft') {
+        // 왼쪽 화살표: 5초 뒤로
+        wavesurferRef.current.skip(-5);
+      } else if (e.code === 'ArrowRight') {
+        // 오른쪽 화살표: 5초 앞으로
+        wavesurferRef.current.skip(5);
+      } else if (e.code === 'Space') {
+        // (선택사항) 스페이스바: 재생/일시정지 토글
+        e.preventDefault(); // 스크롤 방지
+        wavesurferRef.current.playPause();
+      }
+    };
+
+    // 윈도우 전체에 이벤트 붙이기
+    window.addEventListener('keydown', handleKeyDown);
+
+    // 컴포넌트 사라질 때 이벤트 떼기 (청소)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isReady]); // isReady가 바뀔 때마다 갱신
+
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -91,16 +115,18 @@ function App() {
     
     const time = wavesurferRef.current.getCurrentTime();
     
-    // 3. 북마크 생성
     const region = regionsRef.current.addRegion({
       start: time,
-      // end 속성을 아예 생략하면 'Marker(선)' 모드로 동작합니다.
-      // 이렇게 하면 확대/축소 상관없이 항상 선명한 선이 보입니다.
       color: 'rgba(255, 0, 0, 1)', 
       drag: false,
       resize: false,
-      // content: '🚩', // 필요하면 마커 위에 이모지 등을 띄울 수 있습니다.
     });
+
+    if (region.element) {
+      // z-index는 CSS에서 !important로 처리했지만, 
+      // 혹시 몰라 JS에서도 안전하게 한번 더 줍니다.
+      region.element.style.zIndex = '100'; 
+    }
 
     const newBookmark: Bookmark = {
       id: Date.now(),
@@ -136,7 +162,7 @@ function App() {
 
   return (
     <div className="player-container">
-      <h1>🎵 Bun Audio Shadow Player</h1>
+      <h1>🎵 Bun Audio Player</h1>
       
 	<div className="upload-section">
           <input type="file" accept="audio/*" onChange={handleFileUpload} className="file-input" />
@@ -166,6 +192,8 @@ function App() {
           📍 북마크 추가 ({formatTime(currentTime)})
         </button>
       </div>
+      
+      <p className="hint-text">💡 Tip: 키보드 좌우 화살표(←, →)로 5초씩 이동하세요.</p>
 
       <div className="bookmarks-section">
         <h3>북마크 목록 ({bookmarks.length})</h3>
