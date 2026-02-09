@@ -1,7 +1,7 @@
 /* 전체 레이아웃 */
 .player-container {
   max-width: 700px;
-  margin: 50px auto;
+  margin: 0px auto;
   padding: 30px;
   background-color: #f9fafb;
   border-radius: 16px;
@@ -12,18 +12,73 @@
 
 h1 { text-align: center; margin-bottom: 30px; color: #1f2937; }
 
-/* 업로드 섹션 */
 .upload-section { margin-bottom: 20px; text-align: center; }
 .file-input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white; }
 .file-name { margin-top: 10px; color: #6b7280; font-size: 0.9em; }
 
-/* 파형 컨테이너 */
-.waveform-container {
+/* === 파형 래퍼 (중요) === */
+.waveform-wrapper {
+  position: relative;
+  min-height: 140px; 
   margin-bottom: 25px;
-  border: 1px solid #e5e7eb;
   background: white;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 10px;
+  overflow: hidden;
+  /* 래퍼에 패딩을 줘서 안쪽 여백을 확보합니다. */
+  padding: 10px; 
+}
+
+
+/* === 로딩 오버레이 === */
+.loading-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 10;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* 로딩 스피너 애니메이션 */
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* === 파형 컨테이너 표시/숨김 처리 === */
+.waveform-container {
+  /* [수정] 중요: 여기서 padding: 10px을 제거해야 좌표가 정확히 맞습니다. */
+  padding: 0; 
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.wavesurfer-region {
+  z-index: 100 !important;
+}
+
+/* 안 보일 때 (공간은 차지하되 투명하게) */
+.waveform-container.hidden {
+  opacity: 0;
+  pointer-events: none; /* 클릭 방지 */
+}
+
+/* 보일 때 */
+.waveform-container.visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* 컨트롤 버튼들 */
@@ -35,32 +90,27 @@ button {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: transform 0.1s, opacity 0.2s;
+  transition: all 0.2s;
 }
 button:active { transform: scale(0.98); }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
+button:disabled { 
+  opacity: 0.4; 
+  cursor: not-allowed; 
+  background-color: #ccc;
+  color: #888;
+}
 
 .btn-primary { background-color: #4f46e5; color: white; font-weight: bold; }
 .btn-secondary { background-color: #e5e7eb; color: #374151; }
 .btn-delete { background: #fee2e2; color: #ef4444; padding: 5px 10px; font-size: 0.8em; margin-left: 10px;}
 
-/* 북마크 리스트 */
 .bookmarks-section { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb; }
 .bookmark-list { list-style: none; padding: 0; margin: 0; }
 .bookmark-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  border-bottom: 1px solid #f3f4f6;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px; border-bottom: 1px solid #f3f4f6;
 }
 .bookmark-item:last-child { border-bottom: none; }
-.bookmark-time {
-  font-weight: 600;
-  color: #4f46e5;
-  cursor: pointer;
-  padding: 5px 10px;
-  border-radius: 6px;
-}
+.bookmark-time { font-weight: 600; color: #4f46e5; cursor: pointer; padding: 5px 10px; border-radius: 6px; }
 .bookmark-time:hover { background-color: #eef2ff; }
 .empty-state { text-align: center; color: #9ca3af; font-size: 0.9rem; }
