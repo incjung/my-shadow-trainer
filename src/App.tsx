@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import './App.css';
@@ -18,6 +18,13 @@ interface SessionRecord {
   bookmarks: Bookmark[]; 
 }
 
+// [이동] 시간 포맷 함수는 상태에 의존하지 않으므로 컴포넌트 밖으로 뺌
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
 function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
@@ -29,9 +36,7 @@ function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [isReady, setIsReady] = useState(false);
   
-  // [추가] 재생 속도 State (기본 1.0)
   const [playbackRate, setPlaybackRate] = useState(1.0);
-
   const [history, setHistory] = useState<SessionRecord[]>([]);
 
   useEffect(() => {
@@ -65,7 +70,6 @@ function App() {
 
     ws.on('ready', () => {
       setIsReady(true);
-      // [중요] 파일이 바뀌거나 준비되었을 때, 현재 설정된 배속 적용
       ws.setPlaybackRate(playbackRate); 
     });
     
@@ -82,58 +86,18 @@ function App() {
     return () => {
       ws.destroy();
     };
-  }, []); // 의존성 배열은 비워둠 (playbackRate는 ref로 접근하거나 이벤트에서 처리)
+  }, []);
 
-  // [추가] playbackRate가 변경될 때마다 WaveSurfer에 적용
   useEffect(() => {
     if (wavesurferRef.current && isReady) {
       wavesurferRef.current.setPlaybackRate(playbackRate);
     }
   }, [playbackRate, isReady]);
 
-
-  // 키보드 이벤트
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!wavesurferRef.current || !isReady) return;
-
-      if (e.code === 'ArrowLeft') wavesurferRef.current.skip(-5);
-      else if (e.code === 'ArrowRight') wavesurferRef.current.skip(5);
-      else if (e.code === 'Space') {
-        e.preventDefault(); 
-        wavesurferRef.current.playPause();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isReady]);
-
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && wavesurferRef.current && regionsRef.current) {
-      setIsReady(false); 
-      setIsPlaying(false);
-      setBookmarks([]);
-      regionsRef.current.clearRegions();
-      setFileName(file.name);
-
-      const url = URL.createObjectURL(file);
-      wavesurferRef.current.load(url);
-    }
-  };
-
-  const togglePlay = () => {
-    wavesurferRef.current?.playPause();
-  };
-
-  // [추가] 속도 변경 핸들러
-  const handleSpeedChange = (rate: number) => {
-    setPlaybackRate(rate);
-  };
-
-  const addBookmark = () => {
+  // ==========================================
+  // [수정] addBookmark를 useEffect 위로 올리고 useCallback 적용
+  // ==========================================
+  const addBookmark = useCallback(() => {
     if (!wavesurferRef.current || !regionsRef.current || !isReady) return;
     
     const time = wavesurferRef.current.getCurrentTime();
@@ -155,6 +119,52 @@ function App() {
     };
 
     setBookmarks((prev) => [...prev, newBookmark].sort((a, b) => a.time - b.time));
+  }, [isReady]); // isReady가 변할 때만 재생성
+
+  // ==========================================
+  // [수정] 키보드 이벤트 리스너 ('m' 키 추가)
+  // ==========================================
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!wavesurferRef.current || !isReady) return;
+
+      if (e.code === 'ArrowLeft') {
+        wavesurferRef.current.skip(-5);
+      } else if (e.code === 'ArrowRight') {
+        wavesurferRef.current.skip(5);
+      } else if (e.code === 'Space') {
+        e.preventDefault(); 
+        wavesurferRef.current.playPause();
+      } else if (e.code === 'KeyM') { 
+        // [추가] 'm' 키를 누르면 북마크 추가
+        addBookmark();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isReady, addBookmark]); // addBookmark가 의존성에 포함됨
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && wavesurferRef.current && regionsRef.current) {
+      setIsReady(false); 
+      setIsPlaying(false);
+      setBookmarks([]);
+      regionsRef.current.clearRegions();
+      setFileName(file.name);
+
+      const url = URL.createObjectURL(file);
+      wavesurferRef.current.load(url);
+    }
+  };
+
+  const togglePlay = () => {
+    wavesurferRef.current?.playPause();
+  };
+
+  const handleSpeedChange = (rate: number) => {
+    setPlaybackRate(rate);
   };
 
   const jumpToBookmark = (time: number) => {
@@ -202,13 +212,6 @@ function App() {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // 배속 옵션 리스트
   const speedOptions = [0.5, 1.0, 1.5, 2.0];
 
   return (
@@ -248,7 +251,7 @@ function App() {
         </button>
       </div>
 
-      {/* [추가] 배속 조절 버튼 그룹 */}
+      {/* 배속 조절 버튼 그룹 */}
       <div className="speed-controls">
         <span className="speed-label">재생 속도:</span>
         {speedOptions.map((rate) => (
@@ -263,12 +266,12 @@ function App() {
         ))}
       </div>
       
-      <p className="hint-text">💡 Tip: 키보드 좌우 화살표(←, →)로 5초씩 이동하세요.</p>
+      <p className="hint-text">💡 Tip: ←/→(5초 이동), Space(재생/멈춤), <strong>M(북마크)</strong></p>
 
       <div className="bookmarks-section">
         <h3>현재 북마크 ({bookmarks.length})</h3>
         {bookmarks.length === 0 ? (
-          <p className="empty-state">북마크가 없습니다. 잘 안 들리는 부분을 체크해보세요!</p>
+          <p className="empty-state">북마크가 없습니다. M 키를 눌러 추가해보세요!</p>
         ) : (
           <ul className="bookmark-list">
             {bookmarks.map((bm) => (
