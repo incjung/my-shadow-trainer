@@ -107,7 +107,7 @@ function App() {
   const addBookmark = useCallback(() => {
     if (!wavesurferRef.current || !regionsRef.current || !isReady) return;
     
-    const time = wavesurferRef.current.getCurrentTime();
+    const time = Math.max(0, wavesurferRef.current.getCurrentTime() - 5); //mark it before 5 sec 
     
     const region = regionsRef.current.addRegion({
       start: time,
