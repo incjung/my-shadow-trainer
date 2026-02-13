@@ -51,13 +51,7 @@ const Analytics = () => {
         return { totalSessions, totalBookmarks, avgBookmarks, lastPractice };
     }, [sessions]);
 
-    const handleDeleteSession = async (path: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (confirm("정말 삭제하시겠습니까?")) {
-            await storage.deleteSessionFile(path);
-            setSessions(prev => prev.filter(s => s.path !== path));
-        }
-    };
+
 
     return (
         <div className="analytics-container" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -156,21 +150,7 @@ const Analytics = () => {
                                                     />
                                                 </div>
 
-                                                <button
-                                                    onClick={(e) => handleDeleteSession(session.path, e)}
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: 0,
-                                                        right: 0,
-                                                        background: 'transparent',
-                                                        border: 'none',
-                                                        color: '#ef4444',
-                                                        cursor: 'pointer',
-                                                        fontSize: '1.2rem',
-                                                        opacity: 0.5
-                                                    }}
-                                                    title="삭제"
-                                                >×</button>
+
                                             </div>
                                         ))}
                                     </div>
