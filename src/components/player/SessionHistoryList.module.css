@@ -1,0 +1,63 @@
+.section {
+    margin-top: 10px;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.item {
+    position: relative;
+    opacity: 0.8;
+    margin-top: 0px;
+    box-sizing: border-box;
+    transition: opacity 0.2s;
+}
+
+.item:hover {
+    opacity: 1;
+}
+
+.infoContainer {
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    display: flex;
+    gap: 5px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.dateBadge {
+    font-size: 0.7rem;
+    background: rgba(0, 0, 0, 0.2);
+    color: #333;
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+.actionsContainer {
+    position: absolute;
+    top: 2px;
+    right: 5px;
+    display: flex;
+    gap: 5px;
+    z-index: 10;
+}
+
+.btnDelete {
+    font-size: 0.7rem;
+    padding: 1px 4px;
+    background: rgba(200, 0, 0, 0.1);
+    color: #d00;
+    border: 1px solid #fcc;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btnDelete:hover {
+    background: rgba(200, 0, 0, 0.2);
+}

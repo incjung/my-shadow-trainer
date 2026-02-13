@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { storage } from '../lib/storage';
+import { useState, useEffect, useMemo } from 'react';
+import { storage, type SessionIndexItem } from '../lib/storage';
 import WaveformMini from '../components/WaveformMini';
-import { useAudio } from '../context/AudioContext';
+import styles from './Analytics.module.css';
+// import { useAudio } from '../context/AudioContext';
 // import { useNavigate } from 'react-router-dom';
 
 const Analytics = () => {
     const [projects, setProjects] = useState<string[]>([]);
-    const [selectedProject, setSelectedProject] = useState<string | null>(null);
-    const [sessions, setSessions] = useState<any[]>([]);
+    const [selectedProject, setSelectedProject] = useState<string>('');
+    const [sessions, setSessions] = useState<SessionIndexItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     // const { setAudioFile } = useAudio(); // Unused
     // const navigate = useNavigate(); // Unused
@@ -30,12 +31,17 @@ const Analytics = () => {
 
         const loadSessions = async () => {
             setIsLoading(true);
-            const paths = await storage.listSessions(selectedProject);
-            const loadedSessions = await Promise.all(
-                paths.map(path => storage.readSessionFile(path).then(data => ({ ...data, path })))
-            );
-            setSessions(loadedSessions);
-            setIsLoading(false);
+            try {
+                // storage.listSessions now returns the full index items (SessionIndexItem[])
+                // No need to read each file individually!
+                const loadedSessions = await storage.listSessions(selectedProject);
+                setSessions(loadedSessions);
+            } catch (e) {
+                console.error("Failed to load sessions", e);
+                setSessions([]);
+            } finally {
+                setIsLoading(false);
+            }
         };
         loadSessions();
     }, [selectedProject]);
@@ -52,38 +58,26 @@ const Analytics = () => {
     }, [sessions]);
 
 
-
     return (
-        <div className="analytics-container" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-            <header style={{ marginBottom: '30px', textAlign: 'center' }}>
+        <div className={styles.container}>
+            <header className={styles.header}>
                 <h2>📊 학습 기록 분석 (Visual History)</h2>
-                <p style={{ color: '#666' }}>과거의 학습 패턴을 파형으로 비교하고 분석합니다.</p>
+                <p>과거의 학습 패턴을 파형으로 비교하고 분석합니다.</p>
             </header>
 
-            <div className="layout" style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
+            <div className={styles.layout}>
                 {/* Sidebar: Project List */}
-                <div className="sidebar" style={{ flex: '0 0 250px', background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                    <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>📁 프로젝트 선택</h3>
+                <div className={styles.sidebar}>
+                    <h3 className={styles.sidebarTitle}>📁 프로젝트 선택</h3>
                     {projects.length === 0 ? (
-                        <p style={{ color: '#999', fontSize: '0.9rem' }}>저장된 프로젝트가 없습니다.</p>
+                        <p className={styles.noProjects}>저장된 프로젝트가 없습니다.</p>
                     ) : (
-                        <ul style={{ listStyle: 'none', padding: 0 }}>
+                        <ul className={styles.projectList}>
                             {projects.map(p => (
-                                <li key={p} style={{ marginBottom: '8px' }}>
+                                <li key={p} className={styles.projectItem}>
                                     <button
                                         onClick={() => setSelectedProject(p)}
-                                        style={{
-                                            width: '100%',
-                                            textAlign: 'left',
-                                            padding: '10px 15px',
-                                            borderRadius: '8px',
-                                            border: selectedProject === p ? '2px solid #6366f1' : '1px solid #e5e7eb',
-                                            background: selectedProject === p ? '#eef2ff' : 'white',
-                                            color: selectedProject === p ? '#4338ca' : '#374151',
-                                            cursor: 'pointer',
-                                            fontWeight: selectedProject === p ? 600 : 400,
-                                            transition: 'all 0.2s'
-                                        }}
+                                        className={`${styles.projectButton} ${selectedProject === p ? styles.active : ''}`}
                                     >
                                         🎵 {p}
                                     </button>
@@ -94,53 +88,53 @@ const Analytics = () => {
                 </div>
 
                 {/* Main Content: Stats & History */}
-                <div className="main-content" style={{ flex: 1 }}>
+                <div className={styles.mainContent}>
                     {!selectedProject ? (
-                        <div style={{ textAlign: 'center', padding: '50px', color: '#999', background: 'white', borderRadius: '12px' }}>
+                        <div className={styles.emptySelection}>
                             👈 왼쪽에서 분석할 프로젝트를 선택해주세요.
                         </div>
                     ) : (
                         <>
                             {/* Stats Cards */}
                             {stats && (
-                                <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '30px' }}>
-                                    <div className="stat-card" style={statCardStyle}>
-                                        <div style={statLabelStyle}>총 연습 횟수</div>
-                                        <div style={statValueStyle}>{stats.totalSessions}회</div>
+                                <div className={styles.statsGrid}>
+                                    <div className={styles.statCard}>
+                                        <div className={styles.statLabel}>총 연습 횟수</div>
+                                        <div className={styles.statValue}>{stats.totalSessions}회</div>
                                     </div>
-                                    <div className="stat-card" style={statCardStyle}>
-                                        <div style={statLabelStyle}>평균 북마크</div>
-                                        <div style={statValueStyle}>{stats.avgBookmarks}개</div>
+                                    <div className={styles.statCard}>
+                                        <div className={styles.statLabel}>평균 북마크</div>
+                                        <div className={styles.statValue}>{stats.avgBookmarks}개</div>
                                     </div>
-                                    <div className="stat-card" style={statCardStyle}>
-                                        <div style={statLabelStyle}>총 북마크</div>
-                                        <div style={statValueStyle}>{stats.totalBookmarks}개</div>
+                                    <div className={styles.statCard}>
+                                        <div className={styles.statLabel}>총 북마크</div>
+                                        <div className={styles.statValue}>{stats.totalBookmarks}개</div>
                                     </div>
-                                    <div className="stat-card" style={statCardStyle}>
-                                        <div style={statLabelStyle}>마지막 연습</div>
-                                        <div style={statValueStyle} title={stats.lastPractice}>{stats.lastPractice.split(' ')[0]}</div>
+                                    <div className={styles.statCard}>
+                                        <div className={styles.statLabel}>마지막 연습</div>
+                                        <div className={styles.statValue} title={stats.lastPractice}>{stats.lastPractice.split(' ')[0]}</div>
                                     </div>
                                 </div>
                             )}
 
                             {/* Visual History List */}
-                            <div className="history-list-container" style={{ background: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                                <h3 style={{ marginBottom: '20px' }}>📈 파형 기록 비교</h3>
+                            <div className={styles.historyContainer}>
+                                <h3 className={styles.historyTitle}>📈 파형 기록 비교</h3>
                                 {isLoading ? (
-                                    <p>데이터를 불러오는 중...</p>
+                                    <p className={styles.loader}>데이터를 불러오는 중...</p>
                                 ) : sessions.length === 0 ? (
-                                    <p style={{ color: '#999' }}>기록된 세션이 없습니다.</p>
+                                    <p className={styles.noSessions}>기록된 세션이 없습니다.</p>
                                 ) : (
-                                    <div className="visual-history-list" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                    <div className={styles.visualList}>
                                         {sessions.map((session) => (
-                                            <div key={session.path} className="history-item" style={{ position: 'relative', paddingBottom: '10px', borderBottom: '1px solid #f3f4f6' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.85rem', color: '#666' }}>
+                                            <div key={session.path} className={styles.historyItem}>
+                                                <div className={styles.historyItemHeader}>
                                                     <span>📅 {session.date}</span>
                                                     <span>🔖 북마크 {session.count}개</span>
                                                 </div>
 
                                                 {/* Waveform Visualization */}
-                                                <div style={{ background: '#f9fafb', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                                                <div className={styles.waveformWrapper}>
                                                     <WaveformMini
                                                         peaks={session.peaks || []}
                                                         bookmarks={session.bookmarks}
@@ -149,8 +143,6 @@ const Analytics = () => {
                                                     // Note: WaveformMini accepts width. In Home we synced it. Here, a fixed width is fine for comparison.
                                                     />
                                                 </div>
-
-
                                             </div>
                                         ))}
                                     </div>
@@ -162,27 +154,6 @@ const Analytics = () => {
             </div>
         </div>
     );
-};
-
-// Styles
-const statCardStyle = {
-    background: 'white',
-    padding: '15px',
-    borderRadius: '10px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-    textAlign: 'center' as const
-};
-
-const statLabelStyle = {
-    fontSize: '0.85rem',
-    color: '#6b7280',
-    marginBottom: '5px'
-};
-
-const statValueStyle = {
-    fontSize: '1.2rem',
-    fontWeight: 700,
-    color: '#1f2937'
 };
 
 export default Analytics;

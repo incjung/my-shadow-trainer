@@ -1,7 +1,24 @@
+import type { Bookmark } from '../types';
 
 export interface FileSystemEntry {
     name: string;
     kind: 'file' | 'directory';
+}
+
+export interface SessionIndexItem {
+    id: number;
+    date: string;
+    fileName: string;
+    count: number;
+    duration: number;
+    path: string;
+    peaks?: number[];
+    bookmarks: Bookmark[]; // Added bookmarks
+}
+
+// Helper to fix missing TS type for async iterator
+interface AsyncIterableDirectoryHandle extends FileSystemDirectoryHandle {
+    entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
 }
 
 export const storage = {
@@ -24,40 +41,130 @@ export const storage = {
         await writable.write(JSON.stringify(data));
         await writable.close();
 
-        return `${audioFileName}/${fileName}`;
+        const path = `${audioFileName}/${fileName}`;
+
+        // Update Index
+        await this.addToIndex(audioFileName, {
+            id: data.id,
+            date: data.date,
+            fileName: data.fileName,
+            count: data.count,
+            duration: data.duration,
+            path: path,
+            peaks: data.peaks,
+            bookmarks: data.bookmarks
+        });
+
+        return path;
     },
 
-    async listSessions(audioFileName: string): Promise<string[]> {
+    async listSessions(audioFileName: string): Promise<SessionIndexItem[]> {
         try {
-            const dir = await this.getDirectory(audioFileName);
-            const files: string[] = [];
-
-            // @ts-ignore
-            for await (const [name, handle] of dir.entries()) {
-                if (handle.kind === 'file' && name.endsWith('.json') && name !== '_order.json') {
-                    files.push(`${audioFileName}/${name}`);
-                }
+            // Try reading from index first
+            const index = await this.readIndex(audioFileName);
+            if (index && index.length > 0) {
+                return index.sort((a, b) => b.id - a.id); // Default: Newest first (by ID/Timestamp)
             }
 
-            // Apply custom order if exists
-            const order = await this.getSessionOrder(audioFileName);
-            if (order.length > 0) {
-                // Return files in the saved order, with any new files at the top
-                const orderedSet = new Set(order);
-                const newFiles = files.filter(f => !orderedSet.has(f)).sort().reverse();
-                // Filter out files that might have been deleted but are still in order list
-                const validOrderedFiles = order.filter(f => files.includes(f));
+            // If no index, fall back to scanning (and maybe rebuild?)
+            // For now, let's trigger a rebuild transparently if index is missing but files exist
+            const scanResult = await this.scanAndRebuildIndex(audioFileName);
+            return scanResult.sort((a, b) => b.id - a.id);
 
-                return [...newFiles, ...validOrderedFiles];
-            }
-
-            return files.sort().reverse(); // Default: Newest first
         } catch (e) {
             return [];
         }
     },
 
+    // --- Index Management ---
+
+    async getIndexFileHandle(audioFileName: string, create = false) {
+        try {
+            const dir = await this.getDirectory(audioFileName, create);
+            return await dir.getFileHandle('_index.json', { create });
+        } catch (e) {
+            return null;
+        }
+    },
+
+    async readIndex(audioFileName: string): Promise<SessionIndexItem[]> {
+        try {
+            const fileHandle = await this.getIndexFileHandle(audioFileName);
+            if (!fileHandle) return [];
+            const file = await fileHandle.getFile();
+            const text = await file.text();
+            return JSON.parse(text);
+        } catch (e) {
+            return [];
+        }
+    },
+
+    async writeIndex(audioFileName: string, index: SessionIndexItem[]) {
+        const dir = await this.getDirectory(audioFileName, true);
+        const fileHandle = await dir.getFileHandle('_index.json', { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(index));
+        await writable.close();
+    },
+
+    async addToIndex(audioFileName: string, item: SessionIndexItem) {
+        const index = await this.readIndex(audioFileName);
+        // Remove existing if overwriting (unlikely with timestamps but safe)
+        const newIndex = index.filter(i => i.path !== item.path);
+        newIndex.push(item);
+        await this.writeIndex(audioFileName, newIndex);
+    },
+
+    async removeFromIndex(audioFileName: string, path: string) {
+        const index = await this.readIndex(audioFileName);
+        const newIndex = index.filter(i => i.path !== path);
+        await this.writeIndex(audioFileName, newIndex);
+    },
+
+    async scanAndRebuildIndex(audioFileName: string): Promise<SessionIndexItem[]> {
+        try {
+            const dir = await this.getDirectory(audioFileName);
+            const index: SessionIndexItem[] = [];
+
+            const dirHandle = dir as unknown as AsyncIterableDirectoryHandle;
+            for await (const [name, handle] of dirHandle.entries()) {
+                if (handle.kind === 'file' && name.endsWith('.json') && !name.startsWith('_')) {
+                    const fileHandle = handle as FileSystemFileHandle;
+                    const file = await fileHandle.getFile();
+                    const text = await file.text();
+                    try {
+                        const data = JSON.parse(text);
+                        index.push({
+                            id: data.id,
+                            date: data.date,
+                            fileName: data.fileName,
+                            count: data.count,
+                            duration: data.duration,
+                            path: `${audioFileName}/${name}`,
+                            peaks: data.peaks,
+                            bookmarks: data.bookmarks
+                        });
+                    } catch (err) {
+                        console.warn(`Skipping corrupt file: ${name}`, err);
+                    }
+                }
+            }
+
+            await this.writeIndex(audioFileName, index);
+            return index;
+        } catch (e) {
+            return [];
+        }
+    },
+
+    // --- End Index Management ---
+
     async saveSessionOrder(audioFileName: string, order: string[]): Promise<void> {
+        // Deprecated/Legacy support or we can just ignore custom order for now in favor of Index sorting?
+        // Let's keep it but ideally we integrate it into the Index or allow Index to be sorted.
+        // For simplicity in this optimization phase, we rely on standard sorting (Date/ID).
+        // If strict manual ordering is needed, we'd add an 'order' field to the index or keep this.
+        // Let's keep this file separately for now to avoid breaking existing logic if we revert.
         const dir = await this.getDirectory(audioFileName, true);
         const fileHandle = await dir.getFileHandle('_order.json', { create: true });
         const writable = await fileHandle.createWritable();
@@ -92,6 +199,10 @@ export const storage = {
             const dir = await this.getDirectory(dirName);
             await dir.removeEntry(fileName);
             console.info(`[Storage] Deleted file: ${path}`);
+
+            // Update Index
+            await this.removeFromIndex(dirName, path);
+
             return true;
         } catch (e) {
             console.error("[Storage] Failed to delete file", path, e);
@@ -105,8 +216,9 @@ export const storage = {
         try {
             const root = await this.getRoot();
             const projects: string[] = [];
-            // @ts-ignore
-            for await (const [name, handle] of root.entries()) {
+
+            const rootHandle = root as unknown as AsyncIterableDirectoryHandle;
+            for await (const [name, handle] of rootHandle.entries()) {
                 if (handle.kind === 'directory') {
                     projects.push(name);
                 }
@@ -135,8 +247,8 @@ export const storage = {
             const root = await this.getRoot();
             const entriesToDelete: string[] = [];
 
-            // @ts-ignore
-            for await (const [name, handle] of root.entries()) {
+            const rootHandle = root as unknown as AsyncIterableDirectoryHandle;
+            for await (const [name] of rootHandle.entries()) {
                 entriesToDelete.push(name);
             }
 
