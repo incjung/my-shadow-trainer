@@ -114,3 +114,9 @@ my-shadow-ts/
 - **Desktop Application**: Now available as a standalone desktop app using Tauri.
 - **Performance**: Optimized waveform rendering with Web Workers.
 - **Storage**: Persistent session storage using OPFS (Origin Private File System).
+
+## CI/CD (Automated Builds)
+This project uses GitHub Actions to automatically build and release the desktop application.
+- **Trigger**: Pushing a tag starting with `v*` (e.g., `v0.1.0`).
+- **Platform**: Windows (`windows-latest`).
+- **Artifacts**: MSI and EXE installers are attached to the GitHub Release.
