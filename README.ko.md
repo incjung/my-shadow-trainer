@@ -70,3 +70,47 @@ bun dev
 ```bash
 npm run build
 ```
+
+## 데스크톱 앱 (Tauri)
+
+### 개발 모드 (Development)
+핫 리로딩(Hot-reloading)을 지원하며, 코드 수정 시 즉시 반영됩니다. 실행 중에는 터미널(서버)이 켜져 있어야 합니다.
+```bash
+npm run tauri dev
+```
+
+### 배포용 빌드 (Production)
+독립 실행 가능한 설치 파일(deb, rpm, AppImage 등)을 생성합니다. 설치 후에는 터미널이나 서버 없이 단독으로 실행됩니다.
+```bash
+npm run tauri build
+```
+*생성된 파일 위치: `src-tauri/target/release/bundle/`*
+
+### 리눅스 필수 설치 (오디오)
+리눅스에서 오디오 분석이 멈춘다면, 다음 GStreamer 플러그인을 설치해 주세요:
+```bash
+sudo apt install gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly
+```
+
+## 프로젝트 구조 (Project Structure)
+
+```
+my-shadow-ts/
+├── src/
+│   ├── components/  # 재사용 가능한 UI 컴포넌트
+│   ├── pages/       # 페이지 라우트 (Home, Analytics 등)
+│   ├── hooks/       # 커스텀 훅 (useAudio, useWaveSurfer)
+│   ├── workers/     # 웹 워커 (피크 생성 및 백그라운드 작업)
+│   ├── context/     # 전역 상태 관리 (AudioContext)
+│   └── lib/         # 유틸리티 함수 (storage, utils)
+├── src-tauri/       # Tauri 백엔드 설정 및 Rust 코드
+│   ├── tauri.conf.json # Tauri 설정 (권한, 윈도우, 번들 정보)
+│   └── src/         # Rust 소스 코드
+├── public/          # 정적 에셋
+└── dist/            # 프로덕션 빌드 결과물
+```
+
+## 새로운 기능 및 특이사항
+- **데스크톱 앱 지원**: Tauri를 통해 윈도우, 리눅스, 맥OS에서 설치형 앱으로 실행 가능합니다.
+- **성능 최적화**: Web Worker를 도입하여 대용량 오디오 파형 분석 시 UI 멈춤 현상을 방지했습니다.
+- **데이터 저장**: OPFS(Origin Private File System)를 사용하여 브라우저와 데스크톱 앱 간의 데이터 저장 방식을 통일했습니다.

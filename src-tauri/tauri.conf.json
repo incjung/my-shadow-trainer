@@ -1,26 +1,27 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "my-shadow-ts",
+  "productName": "My Shadow",
   "version": "0.1.0",
-  "identifier": "com.my-shadow-ts.dev",
+  "identifier": "com.incjung.my-shadow",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [
       {
-        "title": "My Shadow",
-        "width": 800,
-        "height": 600,
+        "title": "My Shadow - Audio Trainer",
+        "width": 1200,
+        "height": 800,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "center": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: filesystem: ws: wss:;"
     }
   },
   "bundle": {
@@ -32,6 +33,8 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "shortDescription": "Audio shadowing and analysis tool",
+    "longDescription": "A desktop application for audio shadowing practice and waveform analysis."
   }
 }

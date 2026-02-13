@@ -70,3 +70,47 @@ Build for production:
 ```bash
 npm run build
 ```
+
+## Desktop App (Tauri)
+
+### Development Mode
+Runs the app in a window with hot-reloading. Requires the terminal to stay open.
+```bash
+npm run tauri dev
+```
+
+### Production Build
+Creates a standalone executable installer (deb, rpm, AppImage, msi, dmg). No terminal or server required after installation.
+```bash
+npm run tauri build
+```
+*Artifacts location: `src-tauri/target/release/bundle/`*
+
+### Linux Requirements (Audio)
+If audio analysis hangs on Linux, install GStreamer plugins:
+```bash
+sudo apt install gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly
+```
+
+## Project Structure
+
+```
+my-shadow-ts/
+├── src/
+│   ├── components/  # Reusable UI components
+│   ├── pages/       # Route pages (Home, Analytics, etc.)
+│   ├── hooks/       # Custom React hooks (useAudio, useWaveSurfer)
+│   ├── workers/     # Web Workers (peak generation)
+│   ├── context/     # Global state (AudioContext)
+│   └── lib/         # Utility functions (storage, utils)
+├── src-tauri/       # Tauri backend configuration & Rust code
+│   ├── tauri.conf.json # Tauri configuration (permissions, windows)
+│   └── src/         # Rust source code
+├── public/          # Static assets
+└── dist/            # Production build output
+```
+
+## What's New
+- **Desktop Application**: Now available as a standalone desktop app using Tauri.
+- **Performance**: Optimized waveform rendering with Web Workers.
+- **Storage**: Persistent session storage using OPFS (Origin Private File System).
