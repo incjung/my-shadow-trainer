@@ -2,11 +2,15 @@
    1. 글로벌 & 레이아웃 (Global & Layout)
    ========================================= */
 :root {
-  --primary-color: #6366f1; /* Indigo */
+  --primary-color: #6366f1;
+  /* Indigo */
   --primary-hover: #4f46e5;
-  --success-color: #10b981; /* Emerald */
-  --danger-color: #ef4444;  /* Red */
-  --bg-color: #f8fafc;      /* Slate-50 */
+  --success-color: #10b981;
+  /* Emerald */
+  --danger-color: #ef4444;
+  /* Red */
+  --bg-color: #f8fafc;
+  /* Slate-50 */
   --card-bg: #ffffff;
   --text-main: #1e293b;
   --text-sub: #64748b;
@@ -35,8 +39,8 @@ body {
 }
 
 .player-container {
-    /* 기존 스타일 유지 또는 초기화 (현재는 App-container 내부로 들어와서 패딩 제거 등 필요할 수 있음) */
-    width: 100%;
+  /* 기존 스타일 유지 또는 초기화 (현재는 App-container 내부로 들어와서 패딩 제거 등 필요할 수 있음) */
+  width: 100%;
 }
 
 /* 타이틀: 모던한 그라데이션 텍스트 효과 */
@@ -51,7 +55,8 @@ h1 {
   letter-spacing: -0.05rem;
 }
 
-h2, h3 {
+h2,
+h3 {
   font-weight: 700;
   color: var(--text-main);
   margin-bottom: 15px;
@@ -160,14 +165,23 @@ h2, h3 {
   z-index: 100 !important;
 }
 
-.waveform-container.hidden { opacity: 0; pointer-events: none; }
-.waveform-container.visible { opacity: 1; pointer-events: auto; }
+.waveform-container.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.waveform-container.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 /* 로딩 오버레이 */
 .loading-overlay {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -187,12 +201,18 @@ h2, h3 {
   animation: spin 0.8s linear infinite;
   margin-bottom: 10px;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* [추가] 파형 영역 내 시간 표시 오버레이 */
 .time-display-overlay {
   position: absolute;
-  bottom: 10px;
+  top: 10px;
+  /* bottom -> top */
   right: 15px;
   background-color: rgba(0, 0, 0, 0.6);
   color: white;
@@ -201,8 +221,10 @@ h2, h3 {
   font-size: 0.85rem;
   font-family: monospace;
   font-weight: 600;
-  z-index: 101; /* 북마크보다 위에 보일지, 아래 보일지 결정 (현재 최상위) */
-  pointer-events: none; /* 마우스 클릭 통과 */
+  z-index: 101;
+  /* 북마크보다 위에 보일지, 아래 보일지 결정 (현재 최상위) */
+  pointer-events: none;
+  /* 마우스 클릭 통과 */
 }
 
 /* =========================================
@@ -230,7 +252,10 @@ button {
   box-shadow: var(--shadow-sm);
 }
 
-button:active { transform: scale(0.96); }
+button:active {
+  transform: scale(0.96);
+}
+
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -243,6 +268,7 @@ button:disabled {
   color: white;
   box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
 }
+
 .btn-primary:hover {
   background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
   box-shadow: 0 6px 10px rgba(99, 102, 241, 0.4);
@@ -253,8 +279,10 @@ button:disabled {
   background-color: #ffffff;
   color: var(--text-main);
   border: 1px solid #e2e8f0;
-  font-size: 0.95rem; /* 기존보다 살짝 크게 */
+  font-size: 0.95rem;
+  /* 기존보다 살짝 크게 */
 }
+
 .btn-secondary:hover {
   background-color: #f8fafc;
   border-color: #cbd5e1;
@@ -266,6 +294,7 @@ button:disabled {
   color: white;
   box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
 }
+
 .btn-save:hover {
   background: linear-gradient(135deg, #059669 0%, #047857 100%);
   box-shadow: 0 6px 10px rgba(16, 185, 129, 0.4);
@@ -291,7 +320,8 @@ button:disabled {
 
 .bookmarks-header {
   display: flex;
-  justify-content: space-between; /* 제목은 왼쪽, 버튼은 오른쪽 */
+  justify-content: space-between;
+  /* 제목은 왼쪽, 버튼은 오른쪽 */
   align-items: center;
   margin-bottom: 10px;
 }
@@ -368,6 +398,7 @@ button:disabled {
   border-radius: 8px;
   box-shadow: none;
 }
+
 .btn-delete:hover {
   background-color: #fecaca;
   color: #b91c1c;
@@ -422,7 +453,8 @@ button:disabled {
 
 /* 선택된 배속 버튼 스타일 */
 .btn-speed.active {
-  background-color: #6366f1; /* Primary Color */
+  background-color: #6366f1;
+  /* Primary Color */
   color: white;
   border-color: #6366f1;
   font-weight: bold;
@@ -433,150 +465,165 @@ button:disabled {
    7. 학습 기록 리스트 (New History List)
    ========================================= */
 .history-section {
-    border-top: 1px dashed #e2e8f0;
-    padding-top: 40px;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 40px;
 }
 
 .history-section h2 {
-    text-align: center;
-    margin-bottom: 20px;
+  text-align: center;
+  margin-bottom: 20px;
 }
 
 .history-list-container {
-    overflow-x: auto;
+  overflow-x: auto;
 }
 
 .history-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
 }
 
 .history-table th {
-    text-align: left;
-    padding: 12px;
-    border-bottom: 2px solid #e2e8f0;
-    color: var(--text-sub);
-    font-weight: 600;
+  text-align: left;
+  padding: 12px;
+  border-bottom: 2px solid #e2e8f0;
+  color: var(--text-sub);
+  font-weight: 600;
 }
 
 .history-table td {
-    padding: 12px;
-    border-bottom: 1px solid #f1f5f9;
-    color: var(--text-main);
-    vertical-align: middle;
+  padding: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: var(--text-main);
+  vertical-align: middle;
 }
 
 .history-table tr:hover {
-    background-color: #f8fafc;
+  background-color: #f8fafc;
 }
 
-.text-right { text-align: right; }
-.text-sm { font-size: 0.85rem; }
-.font-bold { font-weight: 600; }
+.text-right {
+  text-align: right;
+}
+
+.text-sm {
+  font-size: 0.85rem;
+}
+
+.font-bold {
+  font-weight: 600;
+}
 
 .badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .badge.success {
-    background-color: #d1fae5;
-    color: #047857;
+  background-color: #d1fae5;
+  color: #047857;
 }
 
 .badge.warning {
-    background-color: #fee2e2;
-    color: #b91c1c;
+  background-color: #fee2e2;
+  color: #b91c1c;
 }
 
 .btn-icon-delete {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #cbd5e1;
-    padding: 6px;
-    border-radius: 8px;
-    transition: all 0.2s;
-    box-shadow: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #cbd5e1;
+  padding: 6px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  box-shadow: none;
 }
 
 .btn-icon-delete:hover {
-    background-color: #fee2e2;
-    color: #ef4444;
+  background-color: #fee2e2;
+  color: #ef4444;
 }
 
 /* =========================================
    8. Analytics Page
    ========================================= */
 .analytics-container {
-    animation: fadeIn 0.5s ease;
+  animation: fadeIn 0.5s ease;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-bottom: 40px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
 }
 
 .stat-card {
-    background: #f8fafc;
-    padding: 20px;
-    border-radius: 16px;
-    text-align: center;
-    border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 16px;
+  text-align: center;
+  border: 1px solid #e2e8f0;
 }
 
 .stat-card h3 {
-    font-size: 0.9rem;
-    color: var(--text-sub);
-    margin-bottom: 10px;
+  font-size: 0.9rem;
+  color: var(--text-sub);
+  margin-bottom: 10px;
 }
 
 .stat-value {
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--primary-color);
-    margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--primary-color);
+  margin: 0;
 }
 
 .stat-hint {
-    font-size: 0.8rem;
-    color: var(--success-color);
-    margin-top: 5px;
-    display: block;
+  font-size: 0.8rem;
+  color: var(--success-color);
+  margin-top: 5px;
+  display: block;
 }
 
 .charts-section {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
 }
 
 .chart-card {
-    background: white;
-    padding: 20px;
-    border-radius: 16px;
-    box-shadow: var(--shadow-md);
-    border: 1px solid #f1f5f9;
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid #f1f5f9;
 }
 
 .chart-subtitle {
-    font-size: 0.9rem;
-    color: var(--text-sub);
-    margin-bottom: 20px;
+  font-size: 0.9rem;
+  color: var(--text-sub);
+  margin-bottom: 20px;
 }
 
 .chart-wrapper {
-    /* Recharts needs a contained wrapper */
-    width: 100%;
+  /* Recharts needs a contained wrapper */
+  width: 100%;
 }

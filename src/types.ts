@@ -12,4 +12,6 @@ export interface SessionRecord {
     count: number;
     bookmarks: Bookmark[];
     duration: number; // Added for analytics
+    peaks?: number[]; // Waveform peaks data for visualization
+
 }
