@@ -1,120 +1,208 @@
-import { useMemo } from 'react';
-import { useHistory } from '../hooks/useHistory';
-import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    BarChart,
-    Bar,
-} from 'recharts';
+import React, { useState, useEffect, useMemo } from 'react';
+import { storage } from '../lib/storage';
+import WaveformMini from '../components/WaveformMini';
+import { useAudio } from '../context/AudioContext';
+// import { useNavigate } from 'react-router-dom';
 
 const Analytics = () => {
-    const { history } = useHistory();
+    const [projects, setProjects] = useState<string[]>([]);
+    const [selectedProject, setSelectedProject] = useState<string | null>(null);
+    const [sessions, setSessions] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    // const { setAudioFile } = useAudio(); // Unused
+    // const navigate = useNavigate(); // Unused
 
+    // Load project list on mount
+    useEffect(() => {
+        const loadProjects = async () => {
+            const list = await storage.listAllAudioProjects();
+            setProjects(list);
+        };
+        loadProjects();
+    }, []);
+
+    // Load sessions when a project is selected
+    useEffect(() => {
+        if (!selectedProject) {
+            setSessions([]);
+            return;
+        }
+
+        const loadSessions = async () => {
+            setIsLoading(true);
+            const paths = await storage.listSessions(selectedProject);
+            const loadedSessions = await Promise.all(
+                paths.map(path => storage.readSessionFile(path).then(data => ({ ...data, path })))
+            );
+            setSessions(loadedSessions);
+            setIsLoading(false);
+        };
+        loadSessions();
+    }, [selectedProject]);
+
+    // Calculate Basic Stats
     const stats = useMemo(() => {
-        if (history.length === 0) return null;
+        if (sessions.length === 0) return null;
+        const totalSessions = sessions.length;
+        const totalBookmarks = sessions.reduce((acc, s) => acc + (s.count || 0), 0);
+        const avgBookmarks = (totalBookmarks / totalSessions).toFixed(1);
+        const lastPractice = sessions[0]?.date || '-';
 
-        const totalSessions = history.length;
-        // Total bookmarks calculation removed as per request
-        const totalBookmarks = history.reduce((acc, curr) => acc + curr.count, 0); // Kept for average calculation
+        return { totalSessions, totalBookmarks, avgBookmarks, lastPractice };
+    }, [sessions]);
 
-        // Calculate Average Bookmarks per Audio (Total Bookmarks / Total Sessions)
-        const avgBookmarksPerAudio = totalSessions > 0 ? (totalBookmarks / totalSessions).toFixed(1) : 0;
-
-        // Prepare data for Line Chart (Bookmarks per Audio Trend)
-        const trendData = history
-            .slice()
-            .reverse() // Oldest first
-            .map((record, index) => ({
-                index: index + 1,
-                date: record.date.split(' ')[0], // YYYY-MM-DD
-                count: record.count,
-                fileName: record.fileName
-            }));
-
-        // Prepare data for Bar Chart (Sessions per Day)
-        const sessionsPerDay = history.reduce((acc, curr) => {
-            const date = curr.date.split(' ')[0];
-            acc[date] = (acc[date] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>);
-
-        const consistencyData = Object.entries(sessionsPerDay)
-            .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
-            .slice(-7) // Last 7 days with activity
-            .map(([date, count]) => ({ date, count }));
-
-        return { totalSessions, avgBookmarksPerAudio, trendData, consistencyData };
-    }, [history]);
-
-    if (!stats) {
-        return (
-            <div className="analytics-container">
-                <h2>📊 Statistics & Trends</h2>
-                <p className="empty-state">Not enough data to generate analytics. Start your first session!</p>
-            </div>
-        );
-    }
+    const handleDeleteSession = async (path: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (confirm("정말 삭제하시겠습니까?")) {
+            await storage.deleteSessionFile(path);
+            setSessions(prev => prev.filter(s => s.path !== path));
+        }
+    };
 
     return (
-        <div className="analytics-container">
-            <h2>📊 Statistics & Trends</h2>
+        <div className="analytics-container" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+            <header style={{ marginBottom: '30px', textAlign: 'center' }}>
+                <h2>📊 학습 기록 분석 (Visual History)</h2>
+                <p style={{ color: '#666' }}>과거의 학습 패턴을 파형으로 비교하고 분석합니다.</p>
+            </header>
 
-            <div className="stats-grid">
-                <div className="stat-card">
-                    <h3>Total Sessions</h3>
-                    <p className="stat-value">{stats.totalSessions}</p>
+            <div className="layout" style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
+                {/* Sidebar: Project List */}
+                <div className="sidebar" style={{ flex: '0 0 250px', background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                    <h3 style={{ fontSize: '1.1rem', marginBottom: '15px' }}>📁 프로젝트 선택</h3>
+                    {projects.length === 0 ? (
+                        <p style={{ color: '#999', fontSize: '0.9rem' }}>저장된 프로젝트가 없습니다.</p>
+                    ) : (
+                        <ul style={{ listStyle: 'none', padding: 0 }}>
+                            {projects.map(p => (
+                                <li key={p} style={{ marginBottom: '8px' }}>
+                                    <button
+                                        onClick={() => setSelectedProject(p)}
+                                        style={{
+                                            width: '100%',
+                                            textAlign: 'left',
+                                            padding: '10px 15px',
+                                            borderRadius: '8px',
+                                            border: selectedProject === p ? '2px solid #6366f1' : '1px solid #e5e7eb',
+                                            background: selectedProject === p ? '#eef2ff' : 'white',
+                                            color: selectedProject === p ? '#4338ca' : '#374151',
+                                            cursor: 'pointer',
+                                            fontWeight: selectedProject === p ? 600 : 400,
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        🎵 {p}
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
-                {/* Total Bookmarks card removed */}
-                <div className="stat-card">
-                    <h3>Avg Bookmarks per Audio</h3>
-                    <p className="stat-value">{stats.avgBookmarksPerAudio}</p>
-                    <span className="stat-hint">Lower is better</span>
-                </div>
-            </div>
 
-            <div className="charts-section">
-                <div className="chart-card">
-                    <h3>📉 Difficulty Trend (Bookmarks per File)</h3>
-                    <p className="chart-subtitle">Are you understanding more? (Fewer bookmarks = Better)</p>
-                    <div className="chart-wrapper">
-                        <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={stats.trendData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="index" label={{ value: 'Session #', position: 'insideBottomRight', offset: -5 }} />
-                                <YAxis label={{ value: 'Bookmarks', angle: -90, position: 'insideLeft' }} />
-                                <Tooltip
-                                    formatter={(value: number) => [`${value} bookmarks`, 'Difficulty']}
-                                    labelFormatter={(idx) => `Session #${idx}`}
-                                />
-                                <Line type="monotone" dataKey="count" stroke="#8884d8" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 8 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+                {/* Main Content: Stats & History */}
+                <div className="main-content" style={{ flex: 1 }}>
+                    {!selectedProject ? (
+                        <div style={{ textAlign: 'center', padding: '50px', color: '#999', background: 'white', borderRadius: '12px' }}>
+                            👈 왼쪽에서 분석할 프로젝트를 선택해주세요.
+                        </div>
+                    ) : (
+                        <>
+                            {/* Stats Cards */}
+                            {stats && (
+                                <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '30px' }}>
+                                    <div className="stat-card" style={statCardStyle}>
+                                        <div style={statLabelStyle}>총 연습 횟수</div>
+                                        <div style={statValueStyle}>{stats.totalSessions}회</div>
+                                    </div>
+                                    <div className="stat-card" style={statCardStyle}>
+                                        <div style={statLabelStyle}>평균 북마크</div>
+                                        <div style={statValueStyle}>{stats.avgBookmarks}개</div>
+                                    </div>
+                                    <div className="stat-card" style={statCardStyle}>
+                                        <div style={statLabelStyle}>총 북마크</div>
+                                        <div style={statValueStyle}>{stats.totalBookmarks}개</div>
+                                    </div>
+                                    <div className="stat-card" style={statCardStyle}>
+                                        <div style={statLabelStyle}>마지막 연습</div>
+                                        <div style={statValueStyle} title={stats.lastPractice}>{stats.lastPractice.split(' ')[0]}</div>
+                                    </div>
+                                </div>
+                            )}
 
-                <div className="chart-card">
-                    <h3>📅 Training Consistency</h3>
-                    <p className="chart-subtitle">Sessions per day (Last 7 active days)</p>
-                    <div className="chart-wrapper">
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={stats.consistencyData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis allowDecimals={false} />
-                                <Tooltip />
-                                <Bar dataKey="count" fill="#82ca9d" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
+                            {/* Visual History List */}
+                            <div className="history-list-container" style={{ background: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                                <h3 style={{ marginBottom: '20px' }}>📈 파형 기록 비교</h3>
+                                {isLoading ? (
+                                    <p>데이터를 불러오는 중...</p>
+                                ) : sessions.length === 0 ? (
+                                    <p style={{ color: '#999' }}>기록된 세션이 없습니다.</p>
+                                ) : (
+                                    <div className="visual-history-list" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                        {sessions.map((session) => (
+                                            <div key={session.path} className="history-item" style={{ position: 'relative', paddingBottom: '10px', borderBottom: '1px solid #f3f4f6' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.85rem', color: '#666' }}>
+                                                    <span>📅 {session.date}</span>
+                                                    <span>🔖 북마크 {session.count}개</span>
+                                                </div>
+
+                                                {/* Waveform Visualization */}
+                                                <div style={{ background: '#f9fafb', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                                                    <WaveformMini
+                                                        peaks={session.peaks || []}
+                                                        bookmarks={session.bookmarks}
+                                                        duration={session.duration}
+                                                        width={800} // Fixed width for comparison or responsive? 
+                                                    // Note: WaveformMini accepts width. In Home we synced it. Here, a fixed width is fine for comparison.
+                                                    />
+                                                </div>
+
+                                                <button
+                                                    onClick={(e) => handleDeleteSession(session.path, e)}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        right: 0,
+                                                        background: 'transparent',
+                                                        border: 'none',
+                                                        color: '#ef4444',
+                                                        cursor: 'pointer',
+                                                        fontSize: '1.2rem',
+                                                        opacity: 0.5
+                                                    }}
+                                                    title="삭제"
+                                                >×</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
     );
+};
+
+// Styles
+const statCardStyle = {
+    background: 'white',
+    padding: '15px',
+    borderRadius: '10px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    textAlign: 'center' as const
+};
+
+const statLabelStyle = {
+    fontSize: '0.85rem',
+    color: '#6b7280',
+    marginBottom: '5px'
+};
+
+const statValueStyle = {
+    fontSize: '1.2rem',
+    fontWeight: 700,
+    color: '#1f2937'
 };
 
 export default Analytics;

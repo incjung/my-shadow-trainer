@@ -1,8 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
-import { useHistory } from '../hooks/useHistory';
-import HistoryList from '../components/HistoryList';
 import WaveformMini from '../components/WaveformMini';
 import { storage } from '../lib/storage';
 import { useAudio } from '../context/AudioContext'; // Import context
@@ -35,8 +33,6 @@ function Home() {
     const [fileSessions, setFileSessions] = useState<any[]>([]); // Sessions loaded from OPFS for current file
     const [currentPeaks, setCurrentPeaks] = useState<number[]>([]); // Memoized peaks for current file
     const [mainWaveformWidth, setMainWaveformWidth] = useState(0); // Exact width of the main waveform container
-
-    const { history, addRecord, deleteRecord } = useHistory();
 
     const loadSessions = useCallback(async (name: string) => {
         if (!name) {
@@ -283,18 +279,13 @@ function Home() {
         // 1. Save deep data to OPFS (File System)
         await storage.saveSessionFile(fileName, newRecord);
 
-        // 2. Save lightweight record to LocalStorage (Global History)
-        // Remove peaks to save space in localStorage
-        const { peaks: _, ...lightweightRecord } = newRecord;
-        addRecord(lightweightRecord as SessionRecord);
-
         // 3. Refresh file sessions list
         const sessionPaths = await storage.listSessions(fileName);
         const sessions = await Promise.all(
             sessionPaths.map(path => storage.readSessionFile(path).then(data => ({ ...data, path })))
         );
         setFileSessions(sessions);
-        console.log("Session saved to OPFS and LocalStorage");
+        console.log("Session saved to OPFS");
     };
 
     const handleDeleteSession = async (path: string) => {
@@ -308,16 +299,6 @@ function Home() {
         const order = await storage.getSessionOrder(fileName);
         const newOrder = order.filter(p => p !== path);
         await storage.saveSessionOrder(fileName, newOrder);
-    };
-
-    const handleExportSession = async (session: any) => {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(session));
-        const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", `${fileName}_${session.date}.json`);
-        document.body.appendChild(downloadAnchorNode); // required for firefox
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
     };
 
 
@@ -367,7 +348,7 @@ function Home() {
             </div>
 
             {/* Main Waveform */}
-            <div className="waveform-wrapper" style={{ marginBottom: 0 }}> {/* Remove bottom margin to stack closely */}
+            <div className="waveform-wrapper" style={{ marginBottom: 0 }}>
                 {fileName && !isReady && (
                     <div className="loading-overlay">
                         <div className="spinner"></div>
@@ -476,12 +457,6 @@ function Home() {
                     </ul>
                 )}
             </div>
-
-            <div className="history-section">
-                <h2>📚 학습 기록 (History)</h2>
-                <HistoryList history={history} onDelete={deleteRecord} />
-            </div>
-
         </div>
     );
 }
